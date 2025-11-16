@@ -1,0 +1,36 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16
+    container_name: pr_db
+    environment:
+      POSTGRES_DB: pr_service
+      POSTGRES_USER: pr_user
+      POSTGRES_PASSWORD: pr_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pr_user -d pr_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: pr_service_app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://pr_user:pr_password@db:5432/pr_service
+    ports:
+      - "8080:8080"
+    # volumes:
+    #   - ./app:/app/app
+
+volumes:
+  pg_data:
